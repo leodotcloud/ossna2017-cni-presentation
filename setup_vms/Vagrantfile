@@ -1,0 +1,64 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+$install_prereqs = <<INSTALL_PREREQS
+echo Installing docker
+curl -sSL https://raw.githubusercontent.com/rancher/install-docker/master/1.12.6.sh | sh -
+sudo usermod -aG docker vagrant
+echo Installing other prereqs
+sudo apt-get install -y vim git jq
+echo Setting up Reference CNI plugins
+curl -sfSL https://github.com/containernetworking/plugins/releases/download/v0.6.0/cni-plugins-amd64-v0.6.0.tgz | tar xvzf - -C /opt/cni/bin
+echo Cloning the demo repository
+git clone https://github.com/leodotcloud/ossna2017-cni-presentation.git
+INSTALL_PREREQS
+
+Vagrant.configure(2) do |config|
+
+  config.vm.provision "shell", inline: $install_prereqs
+
+  config.vm.define "demohost1" do |demohost1|
+    demohost1.vm.hostname = 'demohost1'
+    demohost1.vm.box= "ubuntu/trusty64"
+    demohost1.vm.box_url = "ubuntu/trusty64"
+
+    demohost1.vm.network :private_network, ip: "172.31.30.101",
+      nic_type: "82545EM"
+
+    demohost1.vm.provider :virtualbox do |v|
+      v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
+      v.customize ["modifyvm", :id, "--memory", 1024]
+      v.customize ["modifyvm", :id, "--name", "demohost1"]
+    end
+  end
+
+  config.vm.define "demohost2" do |demohost2|
+    demohost2.vm.hostname = 'demohost2'
+    demohost2.vm.box= "ubuntu/trusty64"
+    demohost2.vm.box_url = "ubuntu/trusty64"
+
+    demohost2.vm.network :private_network, ip: "172.31.30.102",
+      nic_type: "82545EM"
+
+    demohost2.vm.provider :virtualbox do |v|
+      v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
+      v.customize ["modifyvm", :id, "--memory", 1024]
+      v.customize ["modifyvm", :id, "--name", "demohost2"]
+    end
+  end
+
+  config.vm.define "demohost3" do |demohost3|
+    demohost3.vm.hostname = 'demohost3'
+    demohost3.vm.box= "ubuntu/trusty64"
+    demohost3.vm.box_url = "ubuntu/trusty64"
+
+    demohost3.vm.network :private_network, ip: "172.31.30.103",
+      nic_type: "82545EM"
+
+    demohost3.vm.provider :virtualbox do |v|
+      v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
+      v.customize ["modifyvm", :id, "--memory", 1024]
+      v.customize ["modifyvm", :id, "--name", "demohost3"]
+    end
+  end
+end

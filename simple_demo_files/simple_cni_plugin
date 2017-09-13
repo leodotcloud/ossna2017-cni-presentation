@@ -1,0 +1,34 @@
+#!/bin/bash
+
+network_config=`cat -`
+
+name=$(echo "$network_config" | jq -r '.name')
+ipam_plugin=$(echo "${network_config}" | jq -r '.ipam.type')
+if [ "${ipam_plugin}" == "" ]; then
+    exit 1
+fi
+
+ipam_plugin_result=$(echo "${network_config}" | $ipam_plugin)
+
+if [ $? -ne 0 ]; then
+    errmsg=$(echo $ipam_plugin_result | jq -r '.msg')
+    if [ -z "$errmsg" ]; then
+        errmsg=$ipam_plugin_result
+    fi
+
+    echo "${name} : error executing $CNI_COMMAND: $errmsg"
+    exit 1
+fi
+
+cni_bridge=$(echo "${network_config}" | jq -r '.bridge')
+container_ip=$(echo "${ipam_plugin_result}" | jq -r '.ips[0].address')
+
+if [ "${CNI_COMMAND}" == "ADD" ]; then
+    SHORT_CONTAINER_ID=${CNI_CONTAINERID:0:5}
+    ip link add name vh-${SHORT_CONTAINER_ID} type veth peer name c-${SHORT_CONTAINER_ID}
+    ip link set dev vh-${SHORT_CONTAINER_ID} master ${cni_bridge}
+    ip link set dev vh-${SHORT_CONTAINER_ID} up
+    ip link set dev c-${SHORT_CONTAINER_ID} netns ${CNI_CONTAINERID} name ${CNI_IFNAME}
+    ip netns exec ${CNI_CONTAINERID} ip link set dev ${CNI_IFNAME} up
+    ip netns exec ${CNI_CONTAINERID} ip address add ${container_ip} dev ${CNI_IFNAME}
+fi
